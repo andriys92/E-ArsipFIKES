@@ -202,20 +202,20 @@
 
     <!-- ================= 1. TOP NAVBAR (STICKY) ================= -->
     <header class="sticky top-0 z-40 bg-cream-100/90 backdrop-blur-md border-b border-cream-300/70 transition-all">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-3 xl:gap-5">
+      <div class="max-w-[1440px] w-full mx-auto px-3 sm:px-5 lg:px-6 h-20 flex items-center justify-between gap-2 lg:gap-3">
 
         <!-- Brand Logo & App Name (Transparan Menyatu dengan Background) -->
-        <div class="flex items-center gap-2.5 sm:gap-3 group cursor-pointer shrink-0" onclick="setActiveNav('hero-section'); scrollToSection('hero-section')">
-          <div class="relative flex items-center justify-center h-11 w-11 sm:h-13 sm:w-13 rounded-2xl p-1 transition-transform group-hover:scale-105 shrink-0">
+        <div class="flex items-center gap-2 sm:gap-2.5 group cursor-pointer shrink-0" onclick="setActiveNav('hero-section'); scrollToSection('hero-section')">
+          <div class="relative flex items-center justify-center h-10 w-10 sm:h-12 sm:w-12 rounded-2xl p-1 transition-transform group-hover:scale-105 shrink-0">
             <img
               id="navbar-logo-img"
               src=""
               alt="Logo Aplikasi"
-              class="max-h-11 max-w-11 sm:max-h-13 sm:max-w-13 logo-transparent-blend blend-multiply hidden"
+              class="max-h-10 max-w-10 sm:max-h-12 sm:max-w-12 logo-transparent-blend blend-multiply hidden"
               onerror="this.classList.add('hidden'); document.getElementById('navbar-default-svg').classList.remove('hidden');"
             />
             <!-- Default SVG Logo Transparan bergaya GreenNest -->
-            <svg id="navbar-default-svg" class="w-11 h-11 sm:w-12 sm:h-12 drop-shadow-sm" viewBox="0 0 64 64" fill="none">
+            <svg id="navbar-default-svg" class="w-10 h-10 sm:w-11 sm:h-11 drop-shadow-sm" viewBox="0 0 64 64" fill="none">
               <!-- Atap Rumah / Arsip Coral -->
               <path d="M32 8L8 28H16V52H48V28H56L32 8Z" fill="#FAF6EE" stroke="#E56B47" stroke-width="4" stroke-linejoin="round"/>
               <path d="M32 6L6 27L11 32L32 14L53 32L58 27L32 6Z" fill="#E56B47"/>
@@ -231,42 +231,42 @@
           </div>
           <div class="whitespace-nowrap">
             <div class="flex items-center gap-1.5">
-              <span id="app-name-display" class="text-lg sm:text-xl xl:text-2xl font-extrabold tracking-tight text-forest-800 leading-none whitespace-nowrap">
+              <span id="app-name-display" class="text-base sm:text-lg xl:text-xl font-extrabold tracking-tight text-forest-800 leading-none whitespace-nowrap">
                 Arsip<span class="text-coral-500">Nest</span>
               </span>
             </div>
-            <p id="app-subtitle-display" class="text-[9px] sm:text-[10px] font-bold tracking-[0.15em] uppercase text-forest-600/80 mt-0.5 whitespace-nowrap">
+            <p id="app-subtitle-display" class="text-[8px] sm:text-[9px] font-bold tracking-[0.12em] uppercase text-forest-600/80 mt-0.5 whitespace-nowrap">
               REKTORAT & FAKULTAS DIGITAL
             </p>
           </div>
         </div>
 
         <!-- Center Navigation Links (Desktop - Semua 1 Baris seperti Beranda, Katalog Arsip Hanya untuk Admin & Staf) -->
-        <nav id="desktop-main-nav" class="hidden lg:flex items-center gap-4 xl:gap-6 text-xs xl:text-sm font-semibold text-forest-800/85 shrink-0 whitespace-nowrap">
+        <nav id="desktop-main-nav" class="hidden lg:flex items-center gap-2.5 lg:gap-3.5 xl:gap-5 text-xs xl:text-[13px] font-semibold text-forest-800/85 shrink-0 whitespace-nowrap">
           <a href="#hero-section" data-section="hero-section" onclick="setActiveNav('hero-section')" class="nav-link whitespace-nowrap text-forest-800 border-b-2 border-forest-700 pb-1 font-extrabold transition">Beranda</a>
           <a id="nav-katalog-desktop" href="#katalog-section" data-section="katalog-section" onclick="setActiveNav('katalog-section'); filterByCategory('ALL')" class="nav-link auth-only-katalog hidden whitespace-nowrap text-forest-800/80 border-b-2 border-transparent pb-1 hover:text-coral-500 transition">Katalog Arsip</a>
           <a href="#kategori-section" data-section="kategori-section" onclick="setActiveNav('kategori-section')" class="nav-link whitespace-nowrap text-forest-800/80 border-b-2 border-transparent pb-1 hover:text-coral-500 transition">6 Layanan Arsip</a>
           <a href="#keunggulan-section" data-section="keunggulan-section" onclick="setActiveNav('keunggulan-section')" class="nav-link whitespace-nowrap text-forest-800/80 border-b-2 border-transparent pb-1 hover:text-coral-500 transition">Tentang Sistem</a>
           <a href="#testimoni-section" data-section="testimoni-section" onclick="setActiveNav('testimoni-section')" class="nav-link whitespace-nowrap text-forest-800/80 border-b-2 border-transparent pb-1 hover:text-coral-500 transition">Unit Kerja</a>
-          <button id="nav-manage-users-btn" onclick="openUserModal()" class="hidden whitespace-nowrap text-coral-600 hover:text-coral-700 font-bold items-center gap-1.5 pb-1">
+          <button id="nav-manage-users-btn" onclick="openUserModal()" class="hidden whitespace-nowrap text-coral-600 hover:text-coral-700 font-bold items-center gap-1 pb-1">
             <i class="fa-solid fa-users-gear"></i> <span>Kelola Akun</span>
           </button>
         </nav>
 
-        <!-- Right CTA Buttons (Semua 1 Baris, Tidak Ada 2 Baris) -->
-        <div class="flex items-center gap-2 sm:gap-2.5 shrink-0 whitespace-nowrap">
+        <!-- Right CTA Buttons (Semua 1 Baris, Tombol Logout Selalu Terlihat Meskipun Nama Panjang) -->
+        <div class="flex items-center gap-1.5 sm:gap-2 shrink-0 whitespace-nowrap min-w-0">
           <!-- Tombol Tambah Arsip (Muncul jika Login Admin / Staf) -->
           <button
             id="btn-add-archive-top"
             onclick="openArchiveModal()"
-            class="hidden sm:inline-flex items-center gap-1.5 bg-forest-700 hover:bg-forest-800 text-white text-xs xl:text-sm font-bold px-3.5 xl:px-4 py-2.5 rounded-full shadow-forest-glow transition whitespace-nowrap shrink-0"
+            class="hidden sm:inline-flex items-center gap-1.5 bg-forest-700 hover:bg-forest-800 text-white text-xs font-bold px-3 xl:px-3.5 py-2 rounded-full shadow-forest-glow transition whitespace-nowrap shrink-0"
           >
             <i class="fa-solid fa-file-circle-plus"></i>
             <span class="whitespace-nowrap">Input Arsip</span>
           </button>
 
           <!-- User Badge / Login Button Coral (1 Baris Nama Staf / Admin) -->
-          <div id="auth-action-container" class="flex items-center gap-2 shrink-0 whitespace-nowrap">
+          <div id="auth-action-container" class="flex items-center gap-1.5 shrink-0 whitespace-nowrap min-w-0">
             <button
               id="btn-login-trigger"
               onclick="openLoginModal()"
@@ -276,20 +276,20 @@
               <span class="whitespace-nowrap">Login Akses</span>
             </button>
 
-            <!-- Panel User Aktif (1 Baris seperti Beranda, Tanpa Teks Baris ke-2) -->
-            <div id="user-logged-panel" class="hidden items-center gap-2 bg-white/95 border border-cream-300 rounded-full pl-3.5 pr-1.5 py-1 shadow-sm whitespace-nowrap shrink-0">
-              <span id="logged-user-name" class="text-xs xl:text-sm font-extrabold text-forest-800 whitespace-nowrap leading-none">Budi Santoso</span>
+            <!-- Panel User Aktif (1 Baris, Nama Panjang Otomatis Rapi & Tombol Logout Selalu Tampak) -->
+            <div id="user-logged-panel" class="hidden items-center gap-1.5 bg-white/95 border border-cream-300 rounded-full pl-3 pr-1.5 py-1 shadow-sm whitespace-nowrap shrink-0">
+              <span id="logged-user-name" class="text-xs font-extrabold text-forest-800 whitespace-nowrap leading-none truncate max-w-[110px] sm:max-w-[140px] xl:max-w-[175px]" title="Budi Santoso">Budi Santoso</span>
               <span id="logged-user-role" class="hidden"></span>
               <button
                 onclick="openIdentityModal()"
-                class="admin-only-edit hidden w-8 h-8 rounded-full bg-cream-100 hover:bg-cream-200 text-forest-700 inline-flex items-center justify-center transition shrink-0"
+                class="admin-only-edit hidden w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-cream-100 hover:bg-cream-200 text-forest-700 inline-flex items-center justify-center transition shrink-0"
                 title="Pengaturan Nama & Logo Aplikasi (Khusus Admin)"
               >
                 <i class="fa-solid fa-sliders text-xs"></i>
               </button>
               <button
                 onclick="handleLogout()"
-                class="w-8 h-8 rounded-full bg-coral-50 hover:bg-coral-500 text-coral-600 hover:text-white flex items-center justify-center transition shrink-0"
+                class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-coral-50 hover:bg-coral-500 text-coral-600 hover:text-white flex items-center justify-center transition shrink-0"
                 title="Keluar / Logout"
               >
                 <i class="fa-solid fa-power-off text-xs"></i>
@@ -3011,8 +3011,10 @@
         if (katalogSection) katalogSection.classList.remove('hidden');
         authOnlyKatalogElements.forEach(el => el.classList.remove('hidden'));
 
-        // Tampilkan Nama Staf / Nama Admin 1 Baris Penuh
-        document.getElementById('logged-user-name').textContent = displayName;
+        // Tampilkan Nama Staf / Nama Admin 1 Baris Penuh + Tooltip Nama Lengkap
+        const loggedNameEl = document.getElementById('logged-user-name');
+        loggedNameEl.textContent = displayName;
+        loggedNameEl.title = displayName;
         document.getElementById('logged-user-role').textContent = appState.currentUser.Role;
 
         if (appState.currentUser.Role === 'Admin') {
