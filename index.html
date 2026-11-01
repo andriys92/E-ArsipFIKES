@@ -1142,6 +1142,34 @@
         </div>
 
         <form id="form-identity" onsubmit="handleSaveIdentity(event)" class="space-y-4">
+          <!-- KONEKSI DATABASE REAL-TIME GOOGLE SHEETS (GAS WEB APP URL) -->
+          <div class="bg-forest-50 border border-forest-100 rounded-2xl p-3.5 space-y-2">
+            <div class="flex items-center justify-between gap-2">
+              <label class="text-xs font-extrabold text-forest-800 uppercase flex items-center gap-1.5">
+                <i class="fa-solid fa-database text-forest-600"></i> URL Database Google Apps Script (Real-Time)
+              </label>
+              <span id="gas-connection-badge-identity" class="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                Mengecek...
+              </span>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-2">
+              <input
+                id="input-gas-webapp-url"
+                type="url"
+                placeholder="https://script.google.com/macros/s/.../exec"
+                class="flex-1 bg-white border border-cream-300 rounded-xl px-3 py-2 text-xs font-semibold text-forest-900 focus:outline-none focus:border-forest-600"
+              />
+              <button
+                type="button"
+                onclick="handleSaveAndSyncGasUrl('input-gas-webapp-url')"
+                class="btn-forest text-white px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 flex items-center justify-center gap-1.5"
+              >
+                <i class="fa-solid fa-rotate"></i>
+                <span>Hubungkan & Sinkronkan</span>
+              </button>
+            </div>
+          </div>
+
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label class="block text-xs font-extrabold text-forest-800 uppercase mb-1">Nama Aplikasi Utama</label>
@@ -1468,6 +1496,27 @@
         <h3 class="text-xl font-extrabold text-forest-800 mb-1">Kelola Akun & Nama Staf / Admin</h3>
         <p class="text-xs text-forest-700/75 mb-4">Tambah, ubah nama staf/admin, atau hapus hak akses pengguna e-Arsip.</p>
 
+        <!-- Bar Status Koneksi Database Real-Time di Modal Akun -->
+        <div class="bg-forest-50 border border-forest-100 rounded-2xl p-3 mb-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <i class="fa-solid fa-cloud-bolt text-forest-700 text-xs shrink-0"></i>
+            <input
+              id="input-gas-url-users"
+              type="url"
+              placeholder="Tempel URL Web App GAS (https://script.google.com/macros/s/.../exec) agar sinkron real-time"
+              class="w-full bg-white border border-cream-300 rounded-xl px-3 py-1.5 text-xs font-semibold text-forest-900 focus:outline-none focus:border-forest-600"
+            />
+          </div>
+          <button
+            type="button"
+            onclick="handleSaveAndSyncGasUrl('input-gas-url-users')"
+            class="btn-forest text-white px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 flex items-center justify-center gap-1.5"
+          >
+            <i class="fa-solid fa-rotate"></i>
+            <span>Sinkronkan Database</span>
+          </button>
+        </div>
+
         <form onsubmit="handleAddUser(event)" class="grid grid-cols-1 sm:grid-cols-5 gap-2.5 bg-cream-100 p-3.5 rounded-2xl border border-cream-300 mb-5">
           <input id="edit-user-original-username" type="hidden" value="" />
           <input id="new-user-username" type="text" required placeholder="Username" class="bg-white border border-cream-300 rounded-xl px-3 py-2 text-xs font-bold" />
@@ -1526,20 +1575,76 @@
   <script>
     // KONFIGURASI BACKEND GOOGLE APPS SCRIPT
     // Ganti URL di bawah ini dengan URL Web App dari Google Apps Script Anda
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbz52zlAMVQmmGpm6gbBTP2faj1h2QQZa6Iw7cy-TRwo_u1T2G0sdFh8Y11bHighv_15/exec";
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbz2GdPzSZ5KU281QLfCQKfXN5iGLI8-0KBgPMz2Au0OeQmZ4GobNV7wIaDZCPjApt_A/exec";
 
-    function isGasConfigured() {
-      return Boolean(GAS_URL && GAS_URL.trim() !== "" && GAS_URL !== "URL_DEPLOY_GAS_ANDA_DISINI" && GAS_URL.startsWith("https://script.google.com/"));
-    }
-
-    // Kunci Penyimpanan Cache Lokal
+    // Kunci Penyimpanan Lokal (Versi Real-Time Tanpa Data Dummy)
     const STORAGE_KEYS = {
-      ARCHIVES: 'ARSIPNEST_DATA_V1',
-      SETTINGS: 'ARSIPNEST_SETTINGS_V1',
-      USERS: 'ARSIPNEST_USERS_V1',
+      GAS_CUSTOM_URL: 'ARSIPNEST_GAS_WEBAPP_URL_RT',
+      ARCHIVES: 'ARSIPNEST_DATA_REALTIME_V2',
+      SETTINGS: 'ARSIPNEST_SETTINGS_REALTIME_V2',
+      USERS: 'ARSIPNEST_USERS_REALTIME_V2',
       SESSION: 'ARSIPNEST_SESSION_V1',
       BOOKMARKS: 'ARSIPNEST_BOOKMARKS_V1'
     };
+
+    // Daftar ID Dummy lama yang wajib dibersihkan otomatis
+    const LEGACY_DUMMY_IDS = [
+      'ARS-2026-001', 'ARS-2026-002', 'ARS-2026-003', 'ARS-2026-004',
+      'ARS-2026-005', 'ARS-2026-006', 'ARS-2025-007', 'ARS-2026-008'
+    ];
+
+    function getActiveGasUrl() {
+      const savedUrl = (localStorage.getItem(STORAGE_KEYS.GAS_CUSTOM_URL) || '').trim();
+      if (savedUrl && savedUrl.startsWith('https://script.google.com/')) {
+        return savedUrl;
+      }
+      if (GAS_URL && GAS_URL.trim() !== '' && GAS_URL !== 'URL_DEPLOY_GAS_ANDA_DISINI' && GAS_URL.startsWith('https://script.google.com/')) {
+        return GAS_URL.trim();
+      }
+      return '';
+    }
+
+    function isGasConfigured() {
+      return Boolean(getActiveGasUrl());
+    }
+
+    // Fungsi Komunikasi Real-Time ke Google Apps Script (Mendukung POST & Fallback GET Anti-CORS)
+    async function callGasApi(action, payloadObj = {}) {
+      const url = getActiveGasUrl();
+      if (!url) {
+        throw new Error('GAS_URL_NOT_SET');
+      }
+
+      const bodyData = { action, ...payloadObj };
+
+      // 1. Coba kirim via POST (text/plain agar tidak terkena blokir CORS preflight di browser)
+      try {
+        const separator = url.includes('?') ? '&' : '?';
+        const response = await fetch(`${url}${separator}_t=${Date.now()}`, {
+          method: 'POST',
+          redirect: 'follow',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+          },
+          body: JSON.stringify(bodyData)
+        });
+        const result = await response.json();
+        if (result && result.status) {
+          return result;
+        }
+      } catch (postErr) {
+        console.warn(`POST [${action}] gagal, mencoba jalur GET fallback...`, postErr);
+      }
+
+      // 2. Fallback via GET parameter jika tidak ada upload file besar
+      const separator = url.includes('?') ? '&' : '?';
+      const encodedPayload = encodeURIComponent(JSON.stringify(bodyData));
+      const getResponse = await fetch(`${url}${separator}action=${encodeURIComponent(action)}&payload=${encodedPayload}&_t=${Date.now()}`, {
+        method: 'GET',
+        redirect: 'follow'
+      });
+      return await getResponse.json();
+    }
 
     // Pengaturan Default Identitas Aplikasi
     const DEFAULT_SETTINGS = {
@@ -1566,139 +1671,7 @@
       { ID_User: 'USR-02', Username: 'peserta', Password: 'edudigital', Nama_Lengkap: 'Budi Santoso', Role: 'Peserta', Unit_Kerja: 'Tata Usaha Fakultas' }
     ];
 
-    // Data Awal Arsip (Digunakan jika database baru diinisialisasi)
-    const INITIAL_DUMMY_ARCHIVES = [
-      {
-        ID_Arsip: 'ARS-2026-001',
-        Kategori: 'SK Rektor',
-        Nomor_Dokumen: '018/UN.REK/SK/I/2026',
-        Judul_Perihal: 'Penetapan Kalender Akademik & Transformasi Arsip Digital Tahun 2026/2027',
-        Tanggal_Dokumen: '2026-01-15',
-        Pengirim_Asal: 'Rektor Universitas',
-        Penerima_Tujuan: 'Seluruh Fakultas & Lembaga',
-        Unit_Terkait: 'Biro Akademik & Kemahasiswaan',
-        Status_Akses: 'Publik',
-        Status_Berlaku: 'Aktif',
-        File_URL: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-        Ringkasan: 'Surat Keputusan Rektor mengenai pedoman kalender perkuliahan, jadwal evaluasi semester, serta kewajiban digitalisasi arsip di seluruh unit kerja.',
-        Penginput: 'admin',
-        Updated_At: '2026-01-15 09:30'
-      },
-      {
-        ID_Arsip: 'ARS-2026-002',
-        Kategori: 'Surat Masuk',
-        Nomor_Dokumen: '0412/E2/DT.01.02/2026',
-        Judul_Perihal: 'Undangan Sosialisasi Hibah Penelitian & Pengabdian Masyarakat Nasional',
-        Tanggal_Dokumen: '2026-02-04',
-        Pengirim_Asal: 'Direktorat Jenderal Pendidikan Tinggi',
-        Penerima_Tujuan: 'Rektor & Ketua LPPM',
-        Unit_Terkait: 'LPPM Kampus',
-        Status_Akses: 'Publik',
-        Status_Berlaku: 'Aktif',
-        File_URL: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-        Ringkasan: 'Surat masuk eksternal terkait jadwal pengajuan proposal hibah riset dosen dan skema pendanaan kolaborasi perguruan tinggi.',
-        Penginput: 'admin',
-        Updated_At: '2026-02-04 11:15'
-      },
-      {
-        ID_Arsip: 'ARS-2026-003',
-        Kategori: 'Surat Keluar',
-        Nomor_Dokumen: '129/UN.BAUK/TU/II/2026',
-        Judul_Perihal: 'Permohonan Delegasi Narasumber Workshop Tata Kelola Kearsipan Modern',
-        Tanggal_Dokumen: '2026-02-18',
-        Pengirim_Asal: 'Wakil Rektor Bidang Umum & SDM',
-        Penerima_Tujuan: 'Arsip Nasional Republik Indonesia (ANRI)',
-        Unit_Terkait: 'Biro Administrasi Umum',
-        Status_Akses: 'Internal',
-        Status_Berlaku: 'Aktif',
-        File_URL: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-        Ringkasan: 'Surat keluar resmi permohonan kesediaan narasumber ahli dalam kegiatan peningkatan kompetensi arsiparis fakultas dan universitas.',
-        Penginput: 'peserta',
-        Updated_At: '2026-02-18 14:20'
-      },
-      {
-        ID_Arsip: 'ARS-2026-004',
-        Kategori: 'SK Dekan',
-        Nomor_Dokumen: '054/UN.FT/SK-DEK/III/2026',
-        Judul_Perihal: 'Pengangkatan Panitia Yudisium, Tugas Akhir & Dosen Pembimbing Semester Genap',
-        Tanggal_Dokumen: '2026-03-02',
-        Pengirim_Asal: 'Dekan Fakultas Teknik & Sains',
-        Penerima_Tujuan: 'Ketua Program Studi & Dosen Pembimbing',
-        Unit_Terkait: 'Fakultas Teknik & Sains',
-        Status_Akses: 'Publik',
-        Status_Berlaku: 'Aktif',
-        File_URL: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-        Ringkasan: 'Keputusan Dekan tentang penetapan tim penguji skripsi, komisi tugas akhir, serta panitia penyelenggara yudisium tingkat fakultas.',
-        Penginput: 'admin',
-        Updated_At: '2026-03-02 10:05'
-      },
-      {
-        ID_Arsip: 'ARS-2026-005',
-        Kategori: 'Nota Dinas',
-        Nomor_Dokumen: 'ND-088/UN.TI/III/2026',
-        Judul_Perihal: 'Pemeliharaan Server Sistem Informasi Terpadu & Pemutakhiran Hak Akses Unit',
-        Tanggal_Dokumen: '2026-03-19',
-        Pengirim_Asal: 'Kepala UPT Teknologi Informasi',
-        Penerima_Tujuan: 'Seluruh Kepala Biro & Kepala Tata Usaha Fakultas',
-        Unit_Terkait: 'UPT TIK',
-        Status_Akses: 'Internal',
-        Status_Berlaku: 'Aktif',
-        File_URL: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-        Ringkasan: 'Nota dinas internal mengenai jadwal sinkronisasi berkala pangkalan data dan panduan keamanan akun pengelola e-Arsip.',
-        Penginput: 'peserta',
-        Updated_At: '2026-03-19 16:00'
-      },
-      {
-        ID_Arsip: 'ARS-2026-006',
-        Kategori: 'MOU',
-        Nomor_Dokumen: 'MOU/012/UN-MITRA/IV/2026',
-        Judul_Perihal: 'Nota Kesepahaman Program Magang Industri, Riset Terapan & Beasiswa Talenta Digital',
-        Tanggal_Dokumen: '2026-04-10',
-        Pengirim_Asal: 'Universitas & PT Telkom Nusantara Digital',
-        Penerima_Tujuan: 'Direktorat Kerjasama & Alumni',
-        Unit_Terkait: 'Kantor Urusan Internasional & Kerjasama',
-        Status_Akses: 'Publik',
-        Status_Berlaku: 'Aktif',
-        File_URL: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-        Ringkasan: 'Kerjasama strategis berdurasi 5 tahun meliputi penempatan mahasiswa MBKM, laboratorium bersama, dan hilirisasi inovasi kampus.',
-        Penginput: 'admin',
-        Updated_At: '2026-04-10 13:45'
-      },
-      {
-        ID_Arsip: 'ARS-2025-007',
-        Kategori: 'SK Rektor',
-        Nomor_Dokumen: '310/UN.REK/SK/XI/2025',
-        Judul_Perihal: 'Standar Baku Tata Naskah Dinas & Kode Klasifikasi Arsip Perguruan Tinggi',
-        Tanggal_Dokumen: '2025-11-22',
-        Pengirim_Asal: 'Rektor Universitas',
-        Penerima_Tujuan: 'Seluruh Pimpinan Unit Kerja',
-        Unit_Terkait: 'Sekretariat Universitas',
-        Status_Akses: 'Publik',
-        Status_Berlaku: 'Arsip Tetap',
-        File_URL: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-        Ringkasan: 'Pedoman baku penomoran Surat Keluar, SK Rektor, SK Dekan, Nota Dinas, dan penyusunan naskah MoU di lingkungan kampus.',
-        Penginput: 'admin',
-        Updated_At: '2025-11-22 08:30'
-      },
-      {
-        ID_Arsip: 'ARS-2026-008',
-        Kategori: 'MOU',
-        Nomor_Dokumen: 'MOU/019/UN-INTL/V/2026',
-        Judul_Perihal: 'Joint Research & Academic Exchange Agreement with GreenTech University',
-        Tanggal_Dokumen: '2026-05-05',
-        Pengirim_Asal: 'Rektorat & GreenTech University',
-        Penerima_Tujuan: 'Fakultas Teknik & Pascasarjana',
-        Unit_Terkait: 'Kantor Kerjasama Internasional',
-        Status_Akses: 'Publik',
-        Status_Berlaku: 'Aktif',
-        File_URL: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-        Ringkasan: 'Dokumen MoU pertukaran dosen dan mahasiswa serta publikasi bersama pada jurnal bereputasi internasional.',
-        Penginput: 'admin',
-        Updated_At: '2026-05-05 15:10'
-      }
-    ];
-
-    // State Aplikasi
+    // State Aplikasi (100% Tanpa Data Dummy Arsip)
     let appState = {
       archives: [],
       filteredArchives: [],
@@ -1712,13 +1685,28 @@
       rawLogoDataUrl: '',
       pendingUploadBase64: null,
       pendingUploadName: '',
-      pendingUploadMime: ''
+      pendingUploadMime: '',
+      isSyncing: false
     };
 
     // ================= INISIALISASI SAAT HALAMAN DIMUAT =================
     window.addEventListener('DOMContentLoaded', () => {
       initApplication();
       initNavScrollSpy();
+
+      // Sinkronisasi Real-Time otomatis saat tab browser kembali aktif
+      window.addEventListener('focus', () => {
+        if (isGasConfigured()) {
+          syncFromDatabaseRealtime(true);
+        }
+      });
+
+      // Sinkronisasi berkala setiap 20 detik jika terhubung ke GAS
+      setInterval(() => {
+        if (isGasConfigured() && !appState.isSyncing) {
+          syncFromDatabaseRealtime(true);
+        }
+      }, 20000);
 
       // Tutup dropdown saran judul surat ketika klik di luar area pencarian katalog
       document.addEventListener('click', (e) => {
@@ -1762,7 +1750,22 @@
       });
     }
 
+    // Bersihkan data dummy lama dari penyimpanan lokal
+    function cleanLegacyDummyData() {
+      localStorage.removeItem('ARSIPNEST_DATA_V1');
+      const savedUsersV1 = localStorage.getItem('ARSIPNEST_USERS_V1');
+      if (savedUsersV1 && !localStorage.getItem(STORAGE_KEYS.USERS)) {
+        localStorage.setItem(STORAGE_KEYS.USERS, savedUsersV1);
+      }
+      const savedSettingsV1 = localStorage.getItem('ARSIPNEST_SETTINGS_V1');
+      if (savedSettingsV1 && !localStorage.getItem(STORAGE_KEYS.SETTINGS)) {
+        localStorage.setItem(STORAGE_KEYS.SETTINGS, savedSettingsV1);
+      }
+    }
+
     async function initApplication() {
+      cleanLegacyDummyData();
+
       // Muat Bookmark & Sesi Login dari LocalStorage
       try {
         const savedBookmarks = localStorage.getItem(STORAGE_KEYS.BOOKMARKS);
@@ -1776,7 +1779,7 @@
         console.warn('Gagal memuat sesi lokal:', e);
       }
 
-      // Muat Cache Lokal terlebih dahulu agar UI tampil instan
+      // Muat data lokal yang sudah bersih dari dummy
       const localSettings = localStorage.getItem(STORAGE_KEYS.SETTINGS);
       appState.settings = localSettings ? { ...DEFAULT_SETTINGS, ...JSON.parse(localSettings) } : { ...DEFAULT_SETTINGS };
 
@@ -1785,10 +1788,12 @@
 
       const localArchives = localStorage.getItem(STORAGE_KEYS.ARCHIVES);
       if (localArchives) {
-        appState.archives = JSON.parse(localArchives);
+        const parsed = JSON.parse(localArchives);
+        appState.archives = Array.isArray(parsed)
+          ? parsed.filter(d => !LEGACY_DUMMY_IDS.includes(d.ID_Arsip))
+          : [];
       } else {
-        appState.archives = [...INITIAL_DUMMY_ARCHIVES];
-        localStorage.setItem(STORAGE_KEYS.ARCHIVES, JSON.stringify(appState.archives));
+        appState.archives = [];
       }
 
       applyIdentityToDOM();
@@ -1796,34 +1801,122 @@
       applySearchAndFilters();
       updateStats();
       updateBookmarkBadge();
+      updateGasConnectionBadges();
 
-      // Jika GAS_URL sudah diisi, sinkronkan langsung dengan Google Sheets
+      // Sinkronkan langsung secara real-time dengan Google Sheets
       if (isGasConfigured()) {
-        try {
-          const res = await fetch(`${GAS_URL}?action=getInitialData`);
-          const result = await res.json();
-          if (result.status === 'success') {
-            const payload = result.data || result;
-            if (Array.isArray(payload.archives)) {
-              appState.archives = payload.archives;
-              localStorage.setItem(STORAGE_KEYS.ARCHIVES, JSON.stringify(appState.archives));
-            }
-            if (payload.settings) {
-              appState.settings = { ...DEFAULT_SETTINGS, ...payload.settings };
-              localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(appState.settings));
-            }
-            if (Array.isArray(payload.users) && payload.users.length > 0) {
-              appState.users = payload.users;
-              localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(appState.users));
-            }
-            applyIdentityToDOM();
-            updateAuthUI();
-            applySearchAndFilters();
-            updateStats();
+        await syncFromDatabaseRealtime(true);
+      }
+    }
+
+    // Tarik data terbaru secara Real-Time dari Google Sheets
+    async function syncFromDatabaseRealtime(silent = false) {
+      if (!isGasConfigured()) return false;
+      appState.isSyncing = true;
+      try {
+        const result = await callGasApi('getInitialData');
+        if (result && result.status === 'success') {
+          const payload = result.data || result;
+
+          if (Array.isArray(payload.archives)) {
+            appState.archives = payload.archives.filter(d => !LEGACY_DUMMY_IDS.includes(d.ID_Arsip));
+            localStorage.setItem(STORAGE_KEYS.ARCHIVES, JSON.stringify(appState.archives));
           }
-        } catch (err) {
-          console.warn('Menggunakan cache lokal karena koneksi ke GAS belum tersedia:', err);
+          if (payload.settings && Object.keys(payload.settings).length > 0) {
+            appState.settings = { ...DEFAULT_SETTINGS, ...payload.settings };
+            localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(appState.settings));
+          }
+          if (Array.isArray(payload.users) && payload.users.length > 0) {
+            appState.users = payload.users;
+            localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(appState.users));
+            // Perbarui nama pada sesi aktif jika berubah di database
+            if (appState.currentUser) {
+              const matched = appState.users.find(u => u.Username.toLowerCase() === appState.currentUser.Username.toLowerCase());
+              if (matched) {
+                appState.currentUser = { ...appState.currentUser, ...matched };
+                localStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(appState.currentUser));
+              }
+            }
+          }
+
+          applyIdentityToDOM();
+          updateAuthUI();
+          applySearchAndFilters();
+          updateStats();
+          if ( ! document.getElementById('modal-users').classList.contains('hidden') ) {
+            renderUsersTable();
+          }
+          updateGasConnectionBadges(true);
+          if (!silent) {
+            showToast('Data berhasil disinkronkan secara real-time dengan Google Sheets!', 'success');
+          }
+          appState.isSyncing = false;
+          return true;
         }
+      } catch (err) {
+        console.warn('Gagal sinkronisasi real-time:', err);
+        updateGasConnectionBadges(false);
+        if (!silent) {
+          showToast('Gagal terhubung ke Google Sheets. Pastikan URL Web App GAS benar & akses diset ke "Siapa saja (Anyone)".', 'error');
+        }
+      }
+      appState.isSyncing = false;
+      return false;
+    }
+
+    function updateGasConnectionBadges(isConnectedOverride = null) {
+      const badge = document.getElementById('gas-connection-badge-identity');
+      const url = getActiveGasUrl();
+      const inputIdentity = document.getElementById('input-gas-webapp-url');
+      const inputUsers = document.getElementById('input-gas-url-users');
+
+      if (inputIdentity && !inputIdentity.value && url) inputIdentity.value = url;
+      if (inputUsers && !inputUsers.value && url) inputUsers.value = url;
+
+      if (!badge) return;
+      if (!url) {
+        badge.className = 'text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-coral-100 text-coral-700';
+        badge.textContent = 'Belum Terhubung';
+      } else if (isConnectedOverride === false) {
+        badge.className = 'text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800';
+        badge.textContent = 'Perlu Cek Akses GAS';
+      } else {
+        badge.className = 'text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800';
+        badge.textContent = 'Real-Time Aktif';
+      }
+    }
+
+    // Simpan URL Web App GAS & langsung dorong seluruh perubahan lokal (Akun, Pengaturan, Arsip) ke Google Sheets
+    async function handleSaveAndSyncGasUrl(inputId) {
+      const inputEl = document.getElementById(inputId);
+      const val = (inputEl ? inputEl.value : '').trim();
+      if (!val || !val.startsWith('https://script.google.com/')) {
+        showToast('Masukkan URL Web App Google Apps Script yang valid (berawalan https://script.google.com/.../exec)', 'error');
+        return;
+      }
+
+      localStorage.setItem(STORAGE_KEYS.GAS_CUSTOM_URL, val);
+      const inputIdentity = document.getElementById('input-gas-webapp-url');
+      const inputUsers = document.getElementById('input-gas-url-users');
+      if (inputIdentity) inputIdentity.value = val;
+      if (inputUsers) inputUsers.value = val;
+
+      showToast('Menghubungkan & menyinkronkan data ke Google Sheets...', 'info');
+
+      try {
+        const res = await callGasApi('syncAllData', {
+          users: appState.users,
+          settings: appState.settings,
+          archives: appState.archives.filter(d => !LEGACY_DUMMY_IDS.includes(d.ID_Arsip))
+        });
+
+        if (res && res.status === 'success') {
+          await syncFromDatabaseRealtime(false);
+        } else {
+          await syncFromDatabaseRealtime(false);
+        }
+      } catch (err) {
+        await syncFromDatabaseRealtime(false);
       }
     }
 
@@ -2712,37 +2805,54 @@
 
       if (isGasConfigured()) {
         try {
-          const res = await fetch(GAS_URL, {
-            method: 'POST',
-            body: JSON.stringify({
-              action: 'saveArchive',
-              archive: payload,
-              uploadFile: appState.pendingUploadBase64 ? {
-                base64: appState.pendingUploadBase64,
-                fileName: appState.pendingUploadName,
-                mimeType: appState.pendingUploadMime
-              } : null
-            })
+          const result = await callGasApi('saveArchive', {
+            archive: payload,
+            uploadFile: appState.pendingUploadBase64 ? {
+              base64: appState.pendingUploadBase64,
+              fileName: appState.pendingUploadName,
+              mimeType: appState.pendingUploadMime
+            } : null
           });
-          const result = await res.json();
-          if (result.status === 'success' && result.archive) {
-            payload.File_URL = result.archive.File_URL || payload.File_URL;
+          if (result && result.status === 'success') {
+            if (result.archive && result.archive.File_URL) {
+              payload.File_URL = result.archive.File_URL;
+            }
+            if (Array.isArray(result.archives)) {
+              appState.archives = result.archives.filter(d => !LEGACY_DUMMY_IDS.includes(d.ID_Arsip));
+            } else {
+              if (existingId) {
+                const idx = appState.archives.findIndex(d => d.ID_Arsip === existingId);
+                if (idx !== -1) appState.archives[idx] = payload;
+              } else {
+                appState.archives.unshift(payload);
+              }
+            }
+            localStorage.setItem(STORAGE_KEYS.ARCHIVES, JSON.stringify(appState.archives));
+            showToast(existingId ? 'Arsip berhasil diperbarui di Google Sheets!' : 'Arsip baru berhasil disimpan secara real-time ke Google Sheets!', 'success');
+          } else {
+            throw new Error((result && result.message) || 'Gagal menyimpan ke GAS');
           }
         } catch (err) {
-          showToast('Tersimpan di cache lokal (sinkronisasi GAS gagal).', 'error');
+          if (existingId) {
+            const idx = appState.archives.findIndex(d => d.ID_Arsip === existingId);
+            if (idx !== -1) appState.archives[idx] = payload;
+          } else {
+            appState.archives.unshift(payload);
+          }
+          localStorage.setItem(STORAGE_KEYS.ARCHIVES, JSON.stringify(appState.archives));
+          showToast('Tersimpan di browser, namun gagal masuk ke Google Sheets. Periksa URL/Deployment GAS.', 'error');
         }
-      }
-
-      if (existingId) {
-        const idx = appState.archives.findIndex(d => d.ID_Arsip === existingId);
-        if (idx !== -1) appState.archives[idx] = payload;
-        showToast('Data arsip berhasil diperbarui.', 'success');
       } else {
-        appState.archives.unshift(payload);
-        showToast('Arsip baru berhasil ditambahkan.', 'success');
+        if (existingId) {
+          const idx = appState.archives.findIndex(d => d.ID_Arsip === existingId);
+          if (idx !== -1) appState.archives[idx] = payload;
+        } else {
+          appState.archives.unshift(payload);
+        }
+        localStorage.setItem(STORAGE_KEYS.ARCHIVES, JSON.stringify(appState.archives));
+        showToast('Tersimpan lokal. Hubungkan URL Web App GAS di Pengaturan Admin agar masuk ke Google Sheets.', 'info');
       }
 
-      localStorage.setItem(STORAGE_KEYS.ARCHIVES, JSON.stringify(appState.archives));
       submitBtn.disabled = false;
       submitBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> <span>Simpan Arsip</span>';
 
@@ -2768,16 +2878,21 @@
 
           if (isGasConfigured()) {
             try {
-              await fetch(GAS_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: 'deleteArchive', id: id })
-              });
-            } catch (e) {}
+              const res = await callGasApi('deleteArchive', { id: id });
+              if (res && Array.isArray(res.archives)) {
+                appState.archives = res.archives.filter(d => !LEGACY_DUMMY_IDS.includes(d.ID_Arsip));
+                localStorage.setItem(STORAGE_KEYS.ARCHIVES, JSON.stringify(appState.archives));
+              }
+              showToast('Dokumen arsip berhasil dihapus dari Google Sheets.', 'success');
+            } catch (e) {
+              showToast('Gagal menghapus di Google Sheets, periksa koneksi GAS.', 'error');
+            }
+          } else {
+            showToast('Dokumen arsip telah dihapus.', 'info');
           }
 
           applySearchAndFilters();
           updateStats();
-          showToast('Dokumen arsip telah dihapus.', 'info');
         }
       );
     }
@@ -2790,6 +2905,10 @@
       }
 
       const s = appState.settings;
+      const gasInput = document.getElementById('input-gas-webapp-url');
+      if (gasInput) gasInput.value = getActiveGasUrl();
+      updateGasConnectionBadges();
+
       document.getElementById('input-app-name').value = s.APP_NAME || '';
       document.getElementById('input-app-subtitle').value = s.APP_SUBTITLE || '';
       document.getElementById('input-hero-title1').value = s.HERO_TITLE_1 || '';
@@ -2880,6 +2999,12 @@
         return;
       }
 
+      // Simpan URL GAS jika diisi pada form pengaturan identitas
+      const gasInput = document.getElementById('input-gas-webapp-url');
+      if (gasInput && gasInput.value.trim().startsWith('https://script.google.com/')) {
+        localStorage.setItem(STORAGE_KEYS.GAS_CUSTOM_URL, gasInput.value.trim());
+      }
+
       appState.settings = {
         ...appState.settings,
         APP_NAME: document.getElementById('input-app-name').value.trim() || 'ArsipNest',
@@ -2904,15 +3029,16 @@
 
       if (isGasConfigured()) {
         try {
-          await fetch(GAS_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'saveSettings', settings: appState.settings })
-          });
-        } catch (err) {}
+          await callGasApi('saveSettings', { settings: appState.settings });
+          showToast('Identitas aplikasi, logo & footer berhasil disimpan real-time ke Google Sheets!', 'success');
+        } catch (err) {
+          showToast('Tersimpan di browser, namun gagal sinkron ke Google Sheets.', 'error');
+        }
+      } else {
+        showToast('Identitas diperbarui. Masukkan URL Web App GAS agar tersimpan ke Google Sheets.', 'info');
       }
 
       closeIdentityModal();
-      showToast('Identitas aplikasi, logo & footer berhasil diperbarui!', 'success');
     }
 
     // ================= SISTEM LOGIN & MANAJEMEN AKUN =================
@@ -2937,12 +3063,8 @@
 
       if (isGasConfigured()) {
         try {
-          const res = await fetch(GAS_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'login', username, password })
-          });
-          const result = await res.json();
-          if (result.status === 'success' && result.user) {
+          const result = await callGasApi('login', { username, password });
+          if (result && result.status === 'success' && result.user) {
             authenticatedUser = result.user;
           }
         } catch (err) {
@@ -2968,6 +3090,9 @@
         localStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(authenticatedUser));
         closeLoginModal();
         updateAuthUI();
+        if (isGasConfigured()) {
+          await syncFromDatabaseRealtime(true);
+        }
         applySearchAndFilters();
         updateStats();
         showToast(`Selamat datang, ${authenticatedUser.Nama_Lengkap}!`, 'success');
@@ -3047,6 +3172,9 @@
         showToast('Hanya Admin yang dapat mengakses pengelolaan akun.', 'error');
         return;
       }
+      const gasInputUsers = document.getElementById('input-gas-url-users');
+      if (gasInputUsers) gasInputUsers.value = getActiveGasUrl();
+
       document.getElementById('edit-user-original-username').value = '';
       document.getElementById('new-user-username').value = '';
       document.getElementById('new-user-password').value = '';
@@ -3098,11 +3226,18 @@
 
     async function handleAddUser(event) {
       event.preventDefault();
+      // Cek apakah Admin baru saja menempelkan URL GAS pada bar atas modal akun
+      const gasInputUsers = document.getElementById('input-gas-url-users');
+      if (gasInputUsers && gasInputUsers.value.trim().startsWith('https://script.google.com/')) {
+        localStorage.setItem(STORAGE_KEYS.GAS_CUSTOM_URL, gasInputUsers.value.trim());
+      }
+
       const origUsername = document.getElementById('edit-user-original-username').value.trim();
       const username = document.getElementById('new-user-username').value.trim();
       const password = document.getElementById('new-user-password').value.trim();
       const nama = document.getElementById('new-user-nama').value.trim();
       const role = document.getElementById('new-user-role').value;
+      const saveBtn = document.getElementById('btn-save-user-form');
 
       if (origUsername) {
         const idx = appState.users.findIndex(u => u.Username.toLowerCase() === origUsername.toLowerCase());
@@ -3124,20 +3259,29 @@
           }
           localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(appState.users));
           renderUsersTable();
-          document.getElementById('edit-user-original-username').value = '';
-          event.target.reset();
-          document.getElementById('btn-save-user-form').textContent = '+ Simpan Akun';
 
           if (isGasConfigured()) {
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Menyimpan...';
             try {
-              await fetch(GAS_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: 'saveUser', user: updatedUser, origUsername: origUsername })
-              });
-            } catch (err) {}
+              const res = await callGasApi('saveUser', { user: updatedUser, origUsername: origUsername });
+              if (res && Array.isArray(res.users)) {
+                appState.users = res.users;
+                localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(appState.users));
+                renderUsersTable();
+              }
+              showToast(`Data akun ${nama} berhasil diperbarui real-time di Google Sheets!`, 'success');
+            } catch (err) {
+              showToast('Gagal menyimpan ke Google Sheets. Periksa URL/Deployment GAS.', 'error');
+            }
+            saveBtn.disabled = false;
+          } else {
+            showToast(`Akun ${nama} disimpan di browser. Tempel URL Web App GAS di atas agar masuk ke Google Sheets.`, 'info');
           }
 
-          showToast(`Data akun ${nama} berhasil diperbarui.`, 'success');
+          document.getElementById('edit-user-original-username').value = '';
+          event.target.reset();
+          saveBtn.textContent = '+ Simpan Akun';
           return;
         }
       }
@@ -3162,15 +3306,24 @@
       event.target.reset();
 
       if (isGasConfigured()) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Menyimpan...';
         try {
-          await fetch(GAS_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'saveUser', user: newUser })
-          });
-        } catch (err) {}
+          const res = await callGasApi('saveUser', { user: newUser });
+          if (res && Array.isArray(res.users)) {
+            appState.users = res.users;
+            localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(appState.users));
+            renderUsersTable();
+          }
+          showToast(`Akun ${nama} berhasil masuk real-time ke Google Sheets!`, 'success');
+        } catch (err) {
+          showToast('Gagal menyimpan ke Google Sheets. Periksa URL/Deployment GAS.', 'error');
+        }
+        saveBtn.disabled = false;
+        saveBtn.textContent = '+ Simpan Akun';
+      } else {
+        showToast(`Akun ${nama} disimpan di browser. Tempel URL Web App GAS di atas lalu klik "Sinkronkan Database".`, 'info');
       }
-
-      showToast(`Akun ${nama} berhasil ditambahkan.`, 'success');
     }
 
     async function deleteUserRow(username) {
@@ -3180,65 +3333,18 @@
 
       if (isGasConfigured()) {
         try {
-          await fetch(GAS_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'deleteUser', username })
-          });
-        } catch (err) {}
-      }
-      showToast(`Akun ${username} dihapus.`, 'info');
-    }
-
-    // ================= EXPORT CSV & UTILITAS =================
-    function exportArchivesToCSV() {
-      if (appState.filteredArchives.length === 0) {
-        showToast('Tidak ada data arsip untuk diekspor.', 'error');
-        return;
-      }
-      const headers = ['ID_Arsip', 'Kategori', 'Nomor_Dokumen', 'Judul_Perihal', 'Tanggal_Dokumen', 'Pengirim_Asal', 'Penerima_Tujuan', 'Unit_Terkait', 'Status_Akses', 'Status_Berlaku', 'File_URL'];
-      const csvRows = [
-        headers.join(','),
-        ...appState.filteredArchives.map(row =>
-          headers.map(field => `"${String(row[field] || '').replace(/"/g, '""')}"`).join(',')
-        )
-      ];
-      const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Rekap_Arsip_${new Date().toISOString().slice(0, 10)}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      showToast('Rekap CSV berhasil diunduh.', 'success');
-    }
-
-    // Modal Konfirmasi Kustom (Tanpa confirm() bawaan browser)
-    function openConfirmModal(title, message, onYesCallback) {
-      document.getElementById('confirm-title').textContent = title;
-      document.getElementById('confirm-message').textContent = message;
-      const yesBtn = document.getElementById('confirm-yes-btn');
-      yesBtn.onclick = () => {
-        closeConfirmModal();
-        onYesCallback();
-      };
-      document.getElementById('modal-confirm').classList.remove('hidden');
-    }
-
-    function closeConfirmModal() {
-      document.getElementById('modal-confirm').classList.add('hidden');
-    }
-
-    function toggleMobileMenu() {
-      const drawer = document.getElementById('mobile-menu-drawer');
-      const icon = document.getElementById('mobile-menu-icon');
-      const isHidden = drawer.classList.contains('hidden');
-      if (isHidden) {
-        drawer.classList.remove('hidden');
-        icon.className = 'fa-solid fa-xmark text-base';
+          const res = await callGasApi('deleteUser', { username });
+          if (res && Array.isArray(res.users)) {
+            appState.users = res.users;
+            localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(appState.users));
+            renderUsersTable();
+          }
+          showToast(`Akun ${username} berhasil dihapus dari Google Sheets.`, 'success');
+        } catch (err) {
+          showToast('Gagal menghapus di Google Sheets.', 'error');
+        }
       } else {
-        drawer.classList.add('hidden');
-        icon.className = 'fa-solid fa-bars text-base';
+        showToast(`Akun ${username} dihapus.`, 'info');
       }
     }
 
